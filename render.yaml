@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: pricelens
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SERPAPI_KEY
+        sync: false
+      - key: COUNTRY
+        value: in
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: CRON_KEY
+        generateValue: true
+      - key: MAX_CHECKS
+        value: "2"
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM
+        sync: false

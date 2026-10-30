@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PriceLens – find the lowest price from a photo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@300;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#04050d;--cyan:#5ef0ff;--violet:#a78bfa;--pink:#ff7ad9;--text:#eaf2ff;--mut:#9fb0d0;
+--glass:rgba(255,255,255,.07);--edge:rgba(255,255,255,.2)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:radial-gradient(900px 500px at 15% 0%,#1b1550 0,transparent 60%),radial-gradient(800px 500px at 90% 20%,#0b3a52 0,transparent 55%),var(--bg);
+color:var(--text);font-family:"Space Grotesk",system-ui,sans-serif;line-height:1.5}
+#bg{position:fixed;inset:0;z-index:0;width:100%;height:100%}
+main{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:clamp(20px,5vw,56px) 16px 80px}
+.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(170%);-webkit-backdrop-filter:blur(18px) saturate(170%);
+border:1px solid var(--edge);border-radius:22px;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(255,255,255,.05),0 20px 60px rgba(0,0,0,.45)}
+h1{font-family:Sora,sans-serif;font-weight:600;font-size:clamp(34px,7vw,64px);line-height:1.05;margin:8px 0 12px;letter-spacing:-.02em;
+background:linear-gradient(100deg,#fff 10%,var(--cyan) 50%,var(--violet) 90%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.lead{color:var(--mut);max-width:52ch;margin:0 0 28px;font-size:1.05rem}
+.brand{font-weight:700;color:var(--cyan);letter-spacing:.02em}
+#drop{padding:34px 20px;text-align:center;cursor:pointer;transition:transform .25s,border-color .25s;position:relative;overflow:hidden}
+#drop:hover,#drop.over{border-color:var(--cyan);transform:translateY(-3px)}
+#drop:focus-visible,button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--cyan);outline-offset:3px}
+#drop::after{content:"";position:absolute;left:-30%;top:0;width:30%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.18),transparent);transform:skewX(-20deg);animation:sweep 5s ease-in-out infinite}
+@keyframes sweep{0%,60%{left:-40%}100%{left:130%}}
+#drop strong{font-size:1.15rem}#drop p{margin:6px 0 0;color:var(--mut);font-size:.92rem}
+#preview{max-height:220px;max-width:100%;border-radius:16px;display:none;margin:0 auto 12px;box-shadow:0 10px 40px rgba(94,240,255,.25)}
+.row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+input[type=text]{flex:1;min-width:200px;padding:14px 16px;border-radius:14px;border:1px solid var(--edge);background:rgba(255,255,255,.06);color:var(--text);font:inherit}
+button{padding:14px 22px;border-radius:14px;border:1px solid rgba(255,255,255,.35);font:inherit;font-weight:700;color:#04121a;cursor:pointer;
+background:linear-gradient(120deg,var(--cyan),var(--violet));box-shadow:0 8px 30px rgba(94,240,255,.35);transition:transform .2s,box-shadow .2s}
+button:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(167,139,250,.5)}button:disabled{opacity:.5;cursor:wait}
+#status{margin:22px 0 0;min-height:24px;color:var(--mut)}#status.err{color:#ff9aa8}
+.loader{display:inline-block;width:16px;height:16px;border:2px solid var(--cyan);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-3px;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+#out{display:none;margin-top:10px}
+.chip{display:inline-block;padding:6px 14px;border-radius:99px;border:1px solid var(--edge);background:rgba(94,240,255,.1);margin:0 8px 8px 0}
+.best{padding:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;border-color:rgba(94,240,255,.55);box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 60px rgba(94,240,255,.22),0 20px 60px rgba(0,0,0,.45)}
+.best img,.card img{width:88px;height:88px;object-fit:contain;border-radius:14px;background:rgba(255,255,255,.9)}
+.best h2{margin:0 0 4px;font-size:1.2rem}.price{font-family:Sora,sans-serif;font-size:2rem;font-weight:600;color:var(--cyan)}
+.go{display:inline-block;margin-top:8px;padding:11px 18px;border-radius:12px;background:linear-gradient(120deg,var(--cyan),var(--violet));color:#04121a;font-weight:700;text-decoration:none}
+h3{font-family:Sora,sans-serif;font-weight:600;margin:34px 0 14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;perspective:900px}
+.card{padding:16px;text-decoration:none;color:inherit;display:block;transition:transform .15s ease-out,border-color .2s;transform-style:preserve-3d;will-change:transform}
+.card:hover{border-color:var(--violet)}
+.card .t{font-size:.92rem;margin:10px 0 6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:2.8em}
+.card .p{font-weight:700;font-size:1.1rem;color:var(--cyan)}.card .s{color:var(--mut);font-size:.85rem}
+.note{color:var(--pink);font-size:.9rem;margin-top:14px}
+nav{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.ghost{background:rgba(255,255,255,.08);color:var(--text);box-shadow:none;border:1px solid var(--edge);padding:9px 16px}
+.hist{padding:16px;margin-top:16px}.hist:empty{display:none}.hist svg{width:100%;height:auto;display:block;margin-top:8px}
+.badge{font-size:.75rem;background:rgba(255,122,217,.18);color:var(--pink);border-radius:99px;padding:2px 8px;vertical-align:middle}
+dialog.glass{color:var(--text);padding:26px;width:min(92vw,380px);background:rgba(14,16,40,.9)}
+dialog::backdrop{background:rgba(2,3,10,.65);backdrop-filter:blur(6px)}
+dialog input{width:100%;margin:6px 0 12px}dialog h2{margin:0 0 12px;font-family:Sora,sans-serif}
+.link{background:none;border:0;box-shadow:none;color:var(--cyan);padding:6px 0;font-weight:400}
+.err{color:#ff9aa8;min-height:1.2em;margin:0 0 8px;font-size:.9rem}
+#saveRow input{max-width:280px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<main>
+  <nav><span class="brand">PriceLens</span><div class="row" style="margin:0"><button id="navWish" class="ghost" hidden>Wishlist</button><button id="navAuth" class="ghost">Sign in</button></div></nav>
+  <h1>Snap it. Find the lowest price.</h1>
+  <p class="lead">Upload a photo of any product. We identify it, compare stores, and show the cheapest link plus similar products worth a look.</p>
+
+  <section class="glass" id="drop" tabindex="0" role="button" aria-label="Upload a product photo">
+    <img id="preview" alt="Selected product photo">
+    <strong id="dropTitle">Drop a photo here, paste it, or tap to choose</strong>
+    <p>JPG, PNG or WebP</p>
+    <input id="file" type="file" accept="image/*" hidden>
+  </section>
+
+  <div class="row">
+    <input id="q" type="text" placeholder="Or type a product name, e.g. Sony WH-1000XM5" aria-label="Product name">
+    <button id="go">Find best price</button>
+  </div>
+  <div id="status" role="status"></div>
+
+  <section id="wish" hidden><h3>Your wishlist</h3><div class="grid" id="wishList"></div></section>
+  <div id="out">
+    <div id="chips"></div>
+    <div class="glass best" id="best"></div>
+    <div class="glass hist" id="hist"></div>
+    <div class="row" id="saveRow"></div>
+    <h3>All offers, cheapest first</h3><div class="grid" id="list"></div>
+    <h3>You might also like</h3><div class="grid" id="recs"></div>
+    <p class="note" id="demo" hidden>Demo data is showing. Add GEMINI_API_KEY and SERPAPI_KEY on your server to get live prices.</p>
+  </div>
+</main>
+
+<dialog id="authDlg" class="glass">
+  <form id="authForm">
+    <h2 id="authTitle">Sign in</h2>
+    <input id="aEmail" type="email" placeholder="Email" autocomplete="email" required aria-label="Email">
+    <input id="aPass" type="password" placeholder="Password (8+ characters)" autocomplete="current-password" required aria-label="Password">
+    <p class="err" id="authErr" role="alert"></p>
+    <div class="row" style="margin:0"><button id="aSubmit" type="submit">Sign in</button><button id="authClose" type="button" class="ghost">Cancel</button></div>
+    <button id="authSwitch" type="button" class="link">New here? Create an account</button>
+  </form>
+</dialog>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* ---------- 3D glass background ---------- */
+(function(){
+  if(!window.THREE) return;
+  const cv=document.getElementById("bg"),R=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true});
+  R.setPixelRatio(Math.min(devicePixelRatio,2));
+  const S=new THREE.Scene(),C=new THREE.PerspectiveCamera(55,1,.1,100);C.position.z=12;
+  S.add(new THREE.AmbientLight(0x6677ff,.6));
+  const l1=new THREE.PointLight(0x5ef0ff,2.4,60);l1.position.set(8,6,8);S.add(l1);
+  const l2=new THREE.PointLight(0xff7ad9,2,60);l2.position.set(-9,-5,6);S.add(l2);
+  const geos=[new THREE.IcosahedronGeometry(1,0),new THREE.OctahedronGeometry(1.1,0),new THREE.TorusKnotGeometry(.7,.24,90,12),new THREE.DodecahedronGeometry(1,0)];
+  const cols=[0x5ef0ff,0xa78bfa,0xff7ad9];const objs=[];
+  for(let i=0;i<14;i++){
+    const g=geos[i%geos.length],c=cols[i%3];
+    const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:c,metalness:.2,roughness:.08,transparent:true,opacity:.28,side:THREE.DoubleSide}));
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:c,transparent:true,opacity:.7})));
+    const s=.6+Math.random()*1.3;m.scale.setScalar(s);
+    m.position.set((Math.random()-.5)*26,(Math.random()-.5)*16,-Math.random()*10);
+    m.userData={r:(Math.random()*.4+.1)*(Math.random()<.5?-1:1),f:Math.random()*6,y:m.position.y};
+    S.add(m);objs.push(m);
+  }
+  let mx=0,my=0;addEventListener("pointermove",e=>{mx=e.clientX/innerWidth-.5;my=e.clientY/innerHeight-.5});
+  function size(){R.setSize(innerWidth,innerHeight,false);C.aspect=innerWidth/innerHeight;C.updateProjectionMatrix()}
+  addEventListener("resize",size);size();
+  const still=matchMedia("(prefers-reduced-motion:reduce)").matches;const clk=new THREE.Clock();
+  (function loop(){const t=clk.getElapsedTime();
+    if(!still)objs.forEach(o=>{o.rotation.x=t*o.userData.r*.6;o.rotation.y=t*o.userData.r;o.position.y=o.userData.y+Math.sin(t*.5+o.userData.f)*.6});
+    C.position.x+=(mx*3-C.position.x)*.04;C.position.y+=(-my*2-C.position.y)*.04;C.lookAt(0,0,0);
+    R.render(S,C);requestAnimationFrame(loop)})();
+})();
+
+/* ---------- App ---------- */
+const $=id=>document.getElementById(id);
+let img=null;
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const safe=u=>/^https?:\/\//.test(u)?u:"#";
+
+function loadFile(f){
+  if(!f||!f.type.startsWith("image/"))return;
+  const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{
+    const k=Math.min(1,1024/Math.max(im.width,im.height)),c=document.createElement("canvas");
+    c.width=im.width*k;c.height=im.height*k;c.getContext("2d").drawImage(im,0,0,c.width,c.height);
+    const url=c.toDataURL("image/jpeg",.85);img=url.split(",")[1];
+    $("preview").src=url;$("preview").style.display="block";$("dropTitle").textContent="Tap to change photo";$("q").value="";
+    run();
+  };im.src=r.result};r.readAsDataURL(f);
+}
+const drop=$("drop");
+drop.onclick=()=>$("file").click();
+drop.onkeydown=e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();$("file").click()}};
+$("file").onchange=e=>loadFile(e.target.files[0]);
+["dragover","dragenter"].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.add("over")}));
+["dragleave","drop"].forEach(n=>drop.addEventListener(n,e=>{e.preventDefault();drop.classList.remove("over")}));
+drop.addEventListener("drop",e=>loadFile(e.dataTransfer.files[0]));
+addEventListener("paste",e=>{const f=[...(e.clipboardData?.files||[])][0];if(f)loadFile(f)});
+$("go").onclick=()=>run($("q").value.trim());
+$("q").onkeydown=e=>{if(e.key==="Enter")run($("q").value.trim())};
+
+function card(x,cls=""){return `<a class="glass card tilt ${cls}" href="${safe(x.link)}" target="_blank" rel="noopener noreferrer">
+  ${x.thumbnail?`<img src="${safe(x.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:""}
+  <div class="t">${esc(x.title)}</div><div class="p">${esc(x.price)}</div>
+  <div class="s">${esc(x.store)}${x.rating?` · ★ ${esc(x.rating)}`:""}</div></a>`}
+
+async function run(query){
+  const st=$("status");$("go").disabled=true;st.className="";
+  st.innerHTML='<span class="loader"></span>'+(query?"Searching stores…":"Identifying product and comparing prices…");
+  try{
+    const r=await fetch("/api/analyze",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(query?{query}:{image:img,mime:"image/jpeg"})});
+    const d=await r.json();if(!r.ok)throw new Error(d.error||"Request failed");
+    st.textContent="";$("q").value=d.product.name;
+    $("chips").innerHTML=`<span class="chip">${esc(d.product.name)}</span>`+(d.product.category?`<span class="chip">${esc(d.product.category)}</span>`:"")+
+      (d.product.alternatives||[]).map(a=>`<span class="chip" style="cursor:pointer" data-q="${esc(a)}">${esc(a)}</span>`).join("");
+    document.querySelectorAll("[data-q]").forEach(c=>c.onclick=()=>run(c.dataset.q));
+    if(!d.best){$("best").innerHTML="<div>No offers found. Try editing the product name above and search again.</div>";$("list").innerHTML=$("recs").innerHTML=""}
+    else{
+      const b=d.best;
+      $("best").innerHTML=(b.thumbnail?`<img src="${safe(b.thumbnail)}" alt="" referrerpolicy="no-referrer">`:"")+
+        `<div style="flex:1;min-width:200px"><div class="s" style="color:var(--mut)">Lowest price found</div><h2>${esc(b.title)}</h2>
+        <div class="price">${esc(b.price)}</div><div class="s" style="color:var(--mut)">at ${esc(b.store)}</div>
+        <a class="go" href="${safe(b.link)}" target="_blank" rel="noopener noreferrer">Open on ${esc(b.store)}</a></div>`;
+      $("list").innerHTML=d.results.map(x=>card(x)).join("");
+      $("recs").innerHTML=d.recommendations.map(x=>card(x)).join("");
+      bindTilt();afterResults(d);
+    }
+    $("demo").hidden=!d.demo;$("out").style.display="block";
+    $("out").scrollIntoView({behavior:"smooth",block:"start"});
+  }catch(e){st.className="err";st.textContent=e.message}
+  $("go").disabled=false;
+}
+function bindTilt(){
+  if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;
+  document.querySelectorAll(".tilt").forEach(el=>{
+    el.onpointermove=e=>{const b=el.getBoundingClientRect(),x=(e.clientX-b.left)/b.width-.5,y=(e.clientY-b.top)/b.height-.5;
+      el.style.transform=`rotateY(${x*14}deg) rotateX(${-y*14}deg) translateZ(8px)`};
+    el.onpointerleave=()=>el.style.transform="";
+  });
+}
+/* ---------- Accounts, wishlist, price history ---------- */
+let me=null,dbReady=true,last=null,authMode="login";
+const api=async(u,o={})=>{const r=await fetch(u,{credentials:"same-origin",headers:{"Content-Type":"application/json"},method:o.method,body:o.body?JSON.stringify(o.body):undefined});
+  const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||"Request failed");return d};
+const say=(m)=>{$("status").className="err";$("status").textContent=m};
+async function refreshMe(){
+  try{const d=await api("/api/me");me=d.email;dbReady=d.dbReady}catch(e){}
+  $("navAuth").textContent=me?"Log out":"Sign in";$("navWish").hidden=!me;if(!me)$("wish").hidden=true;
+}
+$("navAuth").onclick=async()=>{
+  if(me){await api("/api/auth/logout",{method:"POST"});me=null;await refreshMe();return}
+  if(!dbReady){say("Accounts are not set up on this server yet. Add DATABASE_URL (see README).");return}
+  $("authErr").textContent="";$("authDlg").showModal();
+};
+$("authClose").onclick=()=>$("authDlg").close();
+$("authSwitch").onclick=()=>{
+  authMode=authMode==="login"?"signup":"login";const l=authMode==="login";
+  $("authTitle").textContent=$("aSubmit").textContent=l?"Sign in":"Create account";
+  $("authSwitch").textContent=l?"New here? Create an account":"Have an account? Sign in";
+  $("aPass").autocomplete=l?"current-password":"new-password";
+};
+$("authForm").onsubmit=async e=>{
+  e.preventDefault();
+  try{await api("/api/auth/"+authMode,{method:"POST",body:{email:$("aEmail").value,password:$("aPass").value}});
+    $("authDlg").close();$("aPass").value="";await refreshMe();}
+  catch(x){$("authErr").textContent=x.message}
+};
+$("navWish").onclick=()=>{const w=$("wish");w.hidden=!w.hidden;if(!w.hidden){loadWish();w.scrollIntoView({behavior:"smooth"})}};
+
+function afterResults(d){
+  last=d;
+  $("saveRow").innerHTML='<input id="target" type="number" min="1" step="any" placeholder="Alert me at or below (optional)" aria-label="Target price"><button id="saveBtn" type="button">Save to wishlist</button>';
+  $("saveBtn").onclick=saveWish;
+  loadHistory(d);
+}
+async function saveWish(){
+  if(!me){if(!dbReady)return say("Accounts are not set up on this server yet. Add DATABASE_URL (see README).");$("authErr").textContent="Sign in to save products.";$("authDlg").showModal();return}
+  const b=last.best;
+  try{await api("/api/wishlist",{method:"POST",body:{query:last.product.name,targetPrice:$("target").value||null,title:b.title,link:b.link,store:b.store,thumbnail:b.thumbnail,price:b.value,priceText:b.price}});
+    $("saveBtn").textContent="Saved ✓";if(!$("wish").hidden)loadWish()}
+  catch(e){say(e.message)}
+}
+async function loadWish(){
+  if(!me)return;
+  try{const d=await api("/api/wishlist");
+    $("wishList").innerHTML=d.items.length?d.items.map(w=>{
+      const drop=w.prev_price&&w.last_price<w.prev_price;
+      return `<div class="glass card">${w.thumbnail?`<img src="${safe(w.thumbnail)}" alt="" loading="lazy" referrerpolicy="no-referrer">`:""}
+        <div class="t">${esc(w.query)}</div>
+        <div class="p">${esc(w.price_text)} ${drop?`<span class="badge">▼ was ${esc(w.prev_price)}</span>`:""}</div>
+        <div class="s">${esc(w.store)}${w.target_price?` · alert at ${esc(w.target_price)} or less`:""}</div>
+        <div class="row" style="margin-top:10px">${w.link?`<a class="go" style="margin:0" href="${safe(w.link)}" target="_blank" rel="noopener noreferrer">Open</a>`:""}
+        <button class="ghost" data-del="${w.id}">Remove</button></div></div>`}).join("")
+      :'<p class="lead">Nothing saved yet. Search a product and tap Save to wishlist.</p>';
+    document.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{await api("/api/wishlist/"+b.dataset.del,{method:"DELETE"});loadWish()});
+  }catch(e){say(e.message)}
+}
+async function loadHistory(d){
+  const h=$("hist");h.innerHTML="";
+  if(d.demo||!dbReady)return;
+  try{
+    const p=(await api("/api/history?q="+encodeURIComponent(d.product.name))).points;
+    if(p.length<2){h.innerHTML='<div class="s" style="color:var(--mut)">Price history starts building today. Search again or save this product to see the trend.</div>';return}
+    const cur=(d.best.price||"").replace(/[\d.,\s]/g,""),W=600,H=140;
+    const xs=p.map(a=>a.t),ys=p.map(a=>a.p),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys);
+    const X=t=>10+(t-x0)/(x1-x0||1)*(W-20),Y=v=>H-12-(v-y0)/(y1-y0||1)*(H-30);
+    const pts=p.map(a=>X(a.t).toFixed(1)+","+Y(a.p).toFixed(1)).join(" ");
+    h.innerHTML=`<div class="s" style="color:var(--mut)">Lowest price per day, last 90 days. Low ${esc(cur+y0.toLocaleString())}, high ${esc(cur+y1.toLocaleString())}</div>
+      <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Price history chart"><defs><linearGradient id="hg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#5ef0ff" stop-opacity=".35"/><stop offset="1" stop-color="#5ef0ff" stop-opacity="0"/></linearGradient></defs>
+      <polygon points="${X(x0)},${H-4} ${pts} ${X(x1)},${H-4}" fill="url(#hg)"/><polyline points="${pts}" fill="none" stroke="#5ef0ff" stroke-width="2.5" stroke-linejoin="round"/>
+      <circle cx="${X(xs[xs.length-1])}" cy="${Y(ys[ys.length-1])}" r="4.5" fill="#ff7ad9"/></svg>`;
+  }catch(e){}
+}
+refreshMe();
+</script>
+</body>
+</html>
